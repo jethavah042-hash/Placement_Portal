@@ -1,5 +1,13 @@
+const dns = require('dns');
+
+// Configure reliable DNS servers for MongoDB Atlas SRV resolution across all ISPs & Node.js scripts
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+} catch (e) {}
+
 require('dotenv').config();
 
+process.env.MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
 process.env.MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 process.env.JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '15m';
 process.env.JWT_REFRESH_EXPIRES_SHORT = process.env.JWT_REFRESH_EXPIRES_SHORT || '1d';
