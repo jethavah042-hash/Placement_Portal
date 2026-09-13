@@ -39,7 +39,16 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Basic health check route
+// Basic health check and root welcome routes
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Placement Preparation Portal Backend API is live!',
+    health: '/api/health',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
