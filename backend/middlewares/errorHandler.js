@@ -1,9 +1,7 @@
 const ApiError = require('../utils/ApiError');
 
 function errorHandler(err, req, res, next) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err);
-  }
+  console.error('[API Error]:', err);
 
   if (err instanceof ApiError || err.statusCode) {
     return res.status(err.statusCode || 500).json({
@@ -21,7 +19,10 @@ function errorHandler(err, req, res, next) {
     return res.status(409).json({ success: false, message: 'Account with this email already exists' });
   }
 
-  return res.status(500).json({ success: false, message: 'Internal server error' });
+  return res.status(500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+  });
 }
 
 module.exports = errorHandler;

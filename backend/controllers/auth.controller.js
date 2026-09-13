@@ -16,7 +16,7 @@ const LOCK_TIME_MS = 15 * 60 * 1000;
 const ACCESS_COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 15 * 60 * 1000,
   path: '/',
 };
@@ -25,9 +25,9 @@ function refreshCookieOpts(rememberMe) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
-    path: '/api/auth',
+    path: '/',
   };
 }
 
@@ -36,9 +36,14 @@ async function issueTokens(res, user, rememberMe) {
   const refreshToken = signRefreshToken({ sub: user._id.toString() }, rememberMe);
   const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
   const expiresAt = new Date(Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000);
-  await RefreshToken.create({ userId: user._id, tokenHash, expiresAt });
+  try {
+    await RefreshToken.create({ userId: user._id, tokenHash, expiresAt });
+  } catch (err) {
+    console.error('Failed to create refresh token record:', err);
+  }
   res.cookie('accessToken', accessToken, ACCESS_COOKIE_OPTS);
   res.cookie('refreshToken', refreshToken, refreshCookieOpts(rememberMe));
+  return { accessToken, refreshToken };
 }
 
 exports.register = asyncHandler(async (req, res) => {
@@ -106,8 +111,8 @@ exports.login = asyncHandler(async (req, res) => {
       message: 'OTP sent to your registered email',
     });
   }
-  await issueTokens(res, user, !!rememberMe);
-  res.json({ success: true, user: user.toSafeJSON() });
+  const tokens = await issueTokens(res, user, !!rememberMe);
+  res.json({ success: true, user: user.toSafeJSON(), token: tokens.accessToken });
 });
 
 exports.verifyOtp = asyncHandler(async (req, res) => {
@@ -134,8 +139,8 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
   await Otp.deleteMany({ userId, purpose: 'login_2fa' });
   const user = await User.findById(userId);
   if (!user || user.accountStatus !== 'active') throw new ApiError(403, 'Account not accessible');
-  await issueTokens(res, user, !!rememberMe);
-  res.json({ success: true, user: user.toSafeJSON() });
+  const tokens = await issueTokens(res, user, !!rememberMe);
+  res.json({ success: true, user: user.toSafeJSON(), token: tokens.accessToken });
 });
 
 exports.resendOtp = asyncHandler(async (req, res) => {
