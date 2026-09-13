@@ -9,5 +9,8 @@ export const meRequest = () => api.get('/auth/me');
 export const forgotPasswordRequest = (data) => api.post('/auth/forgot-password', data);
 export const resetPasswordRequest = (data) => api.post('/auth/reset-password', data);
 
-export const googleLoginUrl = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
-export const githubLoginUrl = `${import.meta.env.VITE_API_BASE_URL}/auth/github`;
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').trim().replace(/\/+$/, '');
+const normalizedBaseUrl = rawBaseUrl.endsWith('/api') ? rawBaseUrl : `${rawBaseUrl}/api`;
+
+export const googleLoginUrl = `${normalizedBaseUrl}/auth/google`;
+export const githubLoginUrl = `${normalizedBaseUrl}/auth/github`;

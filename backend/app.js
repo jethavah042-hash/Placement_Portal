@@ -79,6 +79,7 @@ const adminEnglishRoutes = require('./routes/adminEnglish.routes');
 const announcementRoutes = require('./routes/announcement.routes');
 const adminRoutes = require('./routes/admin.routes');
 
+app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/reasoning', adminReasoningRoutes);
