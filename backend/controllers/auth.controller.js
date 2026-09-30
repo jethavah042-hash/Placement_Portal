@@ -254,13 +254,37 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Password has been reset. Please log in.' });
 });
 
+function getSafeClientUrl(req) {
+  const envUrl = process.env.CLIENT_URL?.split(',')[0]?.trim()?.replace(/\/+$/, '');
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl;
+  }
+
+  const candidateOrigins = [req?.headers?.origin];
+  if (req?.headers?.referer) {
+    try {
+      const u = new URL(req.headers.referer);
+      candidateOrigins.push(u.origin);
+    } catch (e) {}
+  }
+
+  for (const origin of candidateOrigins) {
+    if (
+      origin &&
+      !origin.includes('accounts.google.com') &&
+      !origin.includes('github.com') &&
+      !origin.includes('localhost')
+    ) {
+      return origin.replace(/\/+$/, '');
+    }
+  }
+
+  return envUrl || 'http://localhost:5173';
+}
+
 exports.oauthSuccess = asyncHandler(async (req, res) => {
   const user = req.user;
   await issueTokens(res, user, true);
-  const clientUrl =
-    (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
-      ? process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '')
-      : (req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
-
+  const clientUrl = getSafeClientUrl(req);
   res.redirect(`${clientUrl}/oauth-success?role=${user.role}`);
 });

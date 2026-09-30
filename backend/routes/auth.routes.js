@@ -24,19 +24,31 @@ router.post('/forgot-password', forgotPasswordLimiter, authController.forgotPass
 router.post('/reset-password', validateNewPassword, authController.resetPassword);
 
 const getClientBaseUrl = (req) => {
-  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
-    return process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '');
+  const envUrl = process.env.CLIENT_URL?.split(',')[0]?.trim()?.replace(/\/+$/, '');
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl;
   }
-  if (req && req.headers && req.headers.origin) {
-    return req.headers.origin.replace(/\/+$/, '');
-  }
-  if (req && req.headers && req.headers.referer) {
+
+  const candidateOrigins = [req?.headers?.origin];
+  if (req?.headers?.referer) {
     try {
       const u = new URL(req.headers.referer);
-      return `${u.protocol}//${u.host}`;
+      candidateOrigins.push(u.origin);
     } catch (e) {}
   }
-  return (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '');
+
+  for (const origin of candidateOrigins) {
+    if (
+      origin &&
+      !origin.includes('accounts.google.com') &&
+      !origin.includes('github.com') &&
+      !origin.includes('localhost')
+    ) {
+      return origin.replace(/\/+$/, '');
+    }
+  }
+
+  return envUrl || 'http://localhost:5173';
 };
 
 // Google OAuth
