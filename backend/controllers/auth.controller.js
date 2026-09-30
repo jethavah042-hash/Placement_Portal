@@ -256,7 +256,7 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 
 function getSafeClientUrl(req) {
   const envUrl = process.env.CLIENT_URL?.split(',')[0]?.trim()?.replace(/\/+$/, '');
-  if (envUrl && !envUrl.includes('localhost')) {
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
     return envUrl;
   }
 
@@ -273,10 +273,16 @@ function getSafeClientUrl(req) {
       origin &&
       !origin.includes('accounts.google.com') &&
       !origin.includes('github.com') &&
-      !origin.includes('localhost')
+      !origin.includes('localhost') &&
+      !origin.includes('127.0.0.1')
     ) {
       return origin.replace(/\/+$/, '');
     }
+  }
+
+  // Fallback to live Vercel frontend in production
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+    return 'https://placement-portal-wbzp.vercel.app';
   }
 
   return envUrl || 'http://localhost:5173';
