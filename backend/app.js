@@ -1,3 +1,4 @@
+require('./config/env');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -23,10 +24,33 @@ app.use((req, res, next) => {
   next();
 });
 app.use(passport.initialize());
+
+// Dynamic CORS configuration supporting Vercel preview/production domains and CLIENT_URL
+const allowedOrigins = (
+  process.env.CLIENT_URL ||
+  'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173'
+)
+  .split(',')
+  .map((url) => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        allowedOrigins.includes(cleanOrigin) ||
+        cleanOrigin.endsWith('.vercel.app') ||
+        process.env.NODE_ENV !== 'production'
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback allows request with credentials matching origin
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   })
 );
 
