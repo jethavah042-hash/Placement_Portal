@@ -23,21 +23,37 @@ router.get('/me', protect, authController.me);
 router.post('/forgot-password', forgotPasswordLimiter, authController.forgotPassword);
 router.post('/reset-password', validateNewPassword, authController.resetPassword);
 
+const getClientBaseUrl = (req) => {
+  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
+    return process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '');
+  }
+  if (req && req.headers && req.headers.origin) {
+    return req.headers.origin.replace(/\/+$/, '');
+  }
+  if (req && req.headers && req.headers.referer) {
+    try {
+      const u = new URL(req.headers.referer);
+      return `${u.protocol}//${u.host}`;
+    } catch (e) {}
+  }
+  return (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '');
+};
+
 // Google OAuth
 const handleGoogleAuth = (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=Google+login+is+not+configured`);
+    return res.redirect(`${getClientBaseUrl(req)}/login?error=Google+login+is+not+configured`);
   }
   passport.authenticate('google', { scope: ['profile', 'email'], session: false })(req, res, next);
 };
 
 const handleGoogleCallback = (req, res, next) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=Google+login+is+not+configured`);
+    return res.redirect(`${getClientBaseUrl(req)}/login?error=Google+login+is+not+configured`);
   }
   passport.authenticate('google', {
     session: false,
-    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=google`,
+    failureRedirect: `${getClientBaseUrl(req)}/login?error=google`,
   })(req, res, () => authController.oauthSuccess(req, res, next));
 };
 
@@ -47,18 +63,18 @@ router.get('/google/callback', handleGoogleCallback);
 // GitHub OAuth
 const handleGithubAuth = (req, res, next) => {
   if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=GitHub+login+is+not+configured`);
+    return res.redirect(`${getClientBaseUrl(req)}/login?error=GitHub+login+is+not+configured`);
   }
   passport.authenticate('github', { scope: ['user:email'], session: false })(req, res, next);
 };
 
 const handleGithubCallback = (req, res, next) => {
   if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
-    return res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=GitHub+login+is+not+configured`);
+    return res.redirect(`${getClientBaseUrl(req)}/login?error=GitHub+login+is+not+configured`);
   }
   passport.authenticate('github', {
     session: false,
-    failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=github`,
+    failureRedirect: `${getClientBaseUrl(req)}/login?error=github`,
   })(req, res, () => authController.oauthSuccess(req, res, next));
 };
 

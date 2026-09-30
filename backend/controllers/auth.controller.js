@@ -223,7 +223,12 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
     tokenHash,
     expiresAt: new Date(Date.now() + Number(process.env.RESET_TOKEN_EXPIRES_MIN || 30) * 60 * 1000),
   });
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${rawToken}&uid=${user._id}`;
+  const clientUrl =
+    (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '')
+      : (req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
+  const resetUrl = `${clientUrl}/reset-password?token=${rawToken}&uid=${user._id}`;
   await sendResetEmail(user.email, resetUrl);
   res.json(genericResponse);
 });
@@ -252,5 +257,10 @@ exports.resetPassword = asyncHandler(async (req, res) => {
 exports.oauthSuccess = asyncHandler(async (req, res) => {
   const user = req.user;
   await issueTokens(res, user, true);
-  res.redirect(`${process.env.CLIENT_URL}/oauth-success?role=${user.role}`);
+  const clientUrl =
+    (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+      ? process.env.CLIENT_URL.split(',')[0].trim().replace(/\/+$/, '')
+      : (req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null) || process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+
+  res.redirect(`${clientUrl}/oauth-success?role=${user.role}`);
 });
