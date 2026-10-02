@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import PageHeader from '../../components/ui/PageHeader';
+import { useAuth } from '../../context/AuthContext';
 import {
   getAdminProfileRequest,
   updateAdminProfileRequest,
@@ -12,38 +13,68 @@ import {
   FiLock,
   FiCheckCircle,
   FiShield,
-  FiAlertCircle
+  FiAlertCircle,
+  FiPhone,
+  FiBook,
+  FiCheck
 } from 'react-icons/fi';
 
 const AdminSettings = () => {
-  const [profile, setProfile] = useState({ name: '', email: '' });
+  const { user, setUser, refreshUser } = useAuth();
+
+  const [profile, setProfile] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    college: '',
+    branch: ''
+  });
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
-    newPassword: ''
+    newPassword: '',
+    confirmPassword: ''
   });
+
   const [profileMsg, setProfileMsg] = useState({ text: '', isError: false });
   const [pwdMsg, setPwdMsg] = useState({ text: '', isError: false });
   const [profileLoading, setProfileLoading] = useState(false);
   const [pwdLoading, setPwdLoading] = useState(false);
 
   useEffect(() => {
-    getAdminProfileRequest().then((res) => {
-      if (res.data.success && res.data.data) {
-        setProfile({
-          name: res.data.data.name || '',
-          email: res.data.data.email || ''
-        });
-      }
-    });
+    getAdminProfileRequest()
+      .then((res) => {
+        const adminData = res.data?.user || res.data?.data;
+        if (adminData) {
+          setProfile({
+            name: adminData.name || '',
+            email: adminData.email || '',
+            phone: adminData.phone || '',
+            college: adminData.college || '',
+            branch: adminData.branch || ''
+          });
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load admin profile:', err);
+      });
   }, []);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileLoading(true);
     setProfileMsg({ text: '', isError: false });
+
     try {
-      await updateAdminProfileRequest(profile);
-      setProfileMsg({ text: 'Profile updated successfully!', isError: false });
+      const res = await updateAdminProfileRequest(profile);
+      const updatedUser = res.data?.user || res.data?.data;
+      if (updatedUser) {
+        setUser(updatedUser);
+        if (typeof refreshUser === 'function') {
+          await refreshUser();
+        }
+      }
+      setProfileMsg({ text: 'Admin profile updated successfully!', isError: false });
     } catch (err) {
       console.error(err);
       setProfileMsg({
@@ -57,12 +88,27 @@ const AdminSettings = () => {
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    setPwdLoading(true);
     setPwdMsg({ text: '', isError: false });
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      return setPwdMsg({ text: 'New passwords do not match.', isError: true });
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      return setPwdMsg({
+        text: 'Password must be at least 8 characters long.',
+        isError: true
+      });
+    }
+
+    setPwdLoading(true);
     try {
-      await changeAdminPasswordRequest(passwordData);
+      await changeAdminPasswordRequest({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
       setPwdMsg({ text: 'Password changed successfully!', isError: false });
-      setPasswordData({ currentPassword: '', newPassword: '' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       console.error(err);
       setPwdMsg({
@@ -86,7 +132,7 @@ const AdminSettings = () => {
         actions={
           <div className="flex items-center gap-2">
             <span className="badge-primary">
-              <FiShield className="w-3 h-3" />
+              <FiShield className="w-3 h-3 mr-1" />
               <span>Root Access</span>
             </span>
           </div>
@@ -105,7 +151,7 @@ const AdminSettings = () => {
                 Admin Profile
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Update display name and administration contact email.
+                Update display name, contact phone, and administration email.
               </p>
             </div>
           </div>
@@ -129,34 +175,78 @@ const AdminSettings = () => {
 
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div>
-              <label className="input-label">Full Name</label>
+              <label className="input-label">Full Name *</label>
               <input
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                 required
+                placeholder="Admin Name"
                 className="input"
               />
             </div>
 
             <div>
-              <label className="input-label">Email Address</label>
+              <label className="input-label">Email Address *</label>
               <input
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                 required
+                placeholder="admin@university.edu"
                 className="input"
               />
+            </div>
+
+            <div>
+              <label className="input-label">Contact Phone</label>
+              <input
+                type="text"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                placeholder="+91 98765 43210"
+                className="input"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="input-label">College / University</label>
+                <input
+                  type="text"
+                  value={profile.college}
+                  onChange={(e) => setProfile({ ...profile, college: e.target.value })}
+                  placeholder="Marwadi University"
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="input-label">Department / Branch</label>
+                <input
+                  type="text"
+                  value={profile.branch}
+                  onChange={(e) => setProfile({ ...profile, branch: e.target.value })}
+                  placeholder="Placement Cell / CSE"
+                  className="input"
+                />
+              </div>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={profileLoading}
-                className="btn-primary"
+                className="btn-primary text-xs flex items-center gap-1.5"
               >
-                {profileLoading ? 'Saving...' : 'Save Profile Changes'}
+                {profileLoading ? (
+                  'Saving Changes...'
+                ) : (
+                  <>
+                    <FiCheck className="w-3.5 h-3.5" />
+                    <span>Save Profile Changes</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -230,13 +320,37 @@ const AdminSettings = () => {
               />
             </div>
 
+            <div>
+              <label className="input-label">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    confirmPassword: e.target.value
+                  })
+                }
+                required
+                placeholder="Re-enter new password"
+                className="input"
+              />
+            </div>
+
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={pwdLoading}
-                className="btn-primary"
+                className="btn-primary text-xs flex items-center gap-1.5"
               >
-                {pwdLoading ? 'Updating...' : 'Update Password'}
+                {pwdLoading ? (
+                  'Updating Password...'
+                ) : (
+                  <>
+                    <FiCheck className="w-3.5 h-3.5" />
+                    <span>Update Password</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

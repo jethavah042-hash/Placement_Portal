@@ -862,24 +862,34 @@ exports.getAdminActivityLogs = asyncHandler(async (req, res) => {
 // ============================================================================
 exports.getAdminProfile = asyncHandler(async (req, res) => {
   const admin = await User.findById(req.user._id).select('-password');
-  res.status(200).json({ success: true, data: admin });
+  if (!admin) throw new ApiError(404, 'Admin not found');
+  const safeData = admin.toSafeJSON ? admin.toSafeJSON() : admin;
+  res.status(200).json({ success: true, data: safeData, user: safeData });
 });
 
 exports.updateAdminProfile = asyncHandler(async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, college, branch } = req.body;
 
   const admin = await User.findById(req.user._id);
-  if (name) admin.name = name;
-  if (email) admin.email = email.toLowerCase();
-  if (phone) admin.phone = phone;
+  if (!admin) throw new ApiError(404, 'Admin not found');
+  if (name) admin.name = name.trim();
+  if (email) admin.email = email.toLowerCase().trim();
+  if (phone !== undefined) admin.phone = String(phone).trim();
+  if (college !== undefined) admin.college = String(college).trim();
+  if (branch !== undefined) admin.branch = String(branch).trim();
+
+  // Enforce role immutability
+  admin.role = 'admin';
 
   await admin.save();
   await logAdminAction(req.user, 'UPDATE_PROFILE', 'User', admin._id, 'Updated profile details', req);
 
+  const safeData = admin.toSafeJSON();
   res.status(200).json({
     success: true,
     message: 'Admin profile updated successfully',
-    data: admin.toSafeJSON()
+    data: safeData,
+    user: safeData
   });
 });
 
@@ -891,12 +901,15 @@ exports.changeAdminPassword = asyncHandler(async (req, res) => {
   }
 
   const admin = await User.findById(req.user._id).select('+password');
+  if (!admin) throw new ApiError(404, 'Admin not found');
+
   const isMatch = await bcrypt.compare(currentPassword, admin.password);
   if (!isMatch) {
     throw new ApiError(400, 'Current password is incorrect');
   }
 
   admin.password = await bcrypt.hash(newPassword, 12);
+  admin.passwordChangedAt = new Date();
   await admin.save();
   await logAdminAction(req.user, 'CHANGE_PASSWORD', 'User', admin._id, 'Changed admin password', req);
 
@@ -905,3 +918,4 @@ exports.changeAdminPassword = asyncHandler(async (req, res) => {
     message: 'Password changed successfully'
   });
 });
+

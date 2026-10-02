@@ -5,9 +5,15 @@ const { authorize } = require('../middlewares/role.middleware');
 
 const router = express.Router();
 
-// All user routes are protected, most restricted to admin
+// All user routes are protected
 router.use(protect);
 
+// Logged-in student / user profile management
+router.get('/profile', userController.getProfile);
+router.put('/profile', userController.updateProfile);
+router.put('/change-password', userController.changePassword);
+
+// Admin user management routes
 router
   .route('/')
   .get(authorize('admin'), userController.getAllUsers);

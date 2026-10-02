@@ -46,18 +46,21 @@ const userSchema = new mongoose.Schema(
     lockUntil: { type: Date },
     passwordChangedAt: { type: Date },
 
-    phone: String,
-    college: String,
-    branch: String,
-    graduationYear: String,
+    phone: { type: String, default: '' },
+    college: { type: String, default: '' },
+    branch: { type: String, default: '' },
+    course: { type: String, default: '' },
+    semester: { type: String, default: '' },
+    graduationYear: { type: String, default: '' },
+    registrationNumber: { type: String, default: '' },
+    bio: { type: String, default: '' },
+    skills: [{ type: String }],
     targetCompanies: [{ type: String }],
     streak: { type: Number, default: 0 },
     readinessScore: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
-
-// NO pre-save bcrypt hook — controller hashes password explicitly before create/save
 
 userSchema.methods.isLocked = function () {
   return !!(this.lockUntil && this.lockUntil > Date.now());
@@ -81,14 +84,20 @@ userSchema.methods.toSafeJSON = function () {
     isTwoFactorEnabled: this.isTwoFactorEnabled,
     accountStatus: this.accountStatus || 'active',
     isBlocked: this.isBlocked,
-    phone: this.phone,
-    college: this.college,
-    branch: this.branch,
-    graduationYear: this.graduationYear,
-    targetCompanies: this.targetCompanies,
-    streak: this.streak,
-    readinessScore: this.readinessScore,
+    phone: this.phone || '',
+    college: this.college || '',
+    branch: this.branch || '',
+    course: this.course || '',
+    semester: this.semester || '',
+    graduationYear: this.graduationYear || '',
+    registrationNumber: this.registrationNumber || '',
+    bio: this.bio || '',
+    skills: this.skills || [],
+    targetCompanies: this.targetCompanies || [],
+    streak: this.streak || 0,
+    readinessScore: this.readinessScore || 0,
     createdAt: this.createdAt,
+    updatedAt: this.updatedAt,
   };
 };
 

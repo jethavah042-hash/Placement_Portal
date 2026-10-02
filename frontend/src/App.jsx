@@ -192,6 +192,7 @@ function App() {
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/activity-logs" element={<AdminActivityLogs />} />
               <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/profile" element={<AdminSettings />} />
               <Route path="/admin/*" element={<Navigate to="/admin/dashboard" />} />
             </Route>
 
